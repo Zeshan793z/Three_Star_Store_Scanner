@@ -7,11 +7,12 @@ import android.widget.Button;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.three_star_store_scanner.ui.addproduct.AddProductActivity;
+import com.example.three_star_store_scanner.ui.billing.BillingActivity;
 import com.example.three_star_store_scanner.ui.productlist.ProductListActivity;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Button addProductButton, viewProductsButton;
+    private Button addProductButton, viewProductsButton, billingButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,15 +21,18 @@ public class MainActivity extends AppCompatActivity {
 
         addProductButton = findViewById(R.id.addProductButton);
         viewProductsButton = findViewById(R.id.viewProductsButton);
+        billingButton = findViewById(R.id.billingButton);
 
         addProductButton.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, AddProductActivity.class);
-            startActivity(intent);
+            startActivity(new Intent(MainActivity.this, AddProductActivity.class));
         });
 
         viewProductsButton.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, ProductListActivity.class);
-            startActivity(intent);
+            startActivity(new Intent(MainActivity.this, ProductListActivity.class));
+        });
+
+        billingButton.setOnClickListener(v -> {
+            startActivity(new Intent(MainActivity.this, BillingActivity.class));
         });
     }
 }
