@@ -25,6 +25,8 @@
 
         <activity android:name=".ui.addproduct.AddProductActivity"/>
         <activity android:name=".ui.productlist.ProductListActivity"/>
+        <activity android:name=".ui.scanner.BarcodeScannerActivity"/>
+
     </application>
 
 </manifest>
