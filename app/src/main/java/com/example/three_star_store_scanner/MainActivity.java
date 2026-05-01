@@ -2,37 +2,39 @@ package com.example.three_star_store_scanner;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.three_star_store_scanner.R;
 import com.example.three_star_store_scanner.ui.addproduct.AddProductActivity;
 import com.example.three_star_store_scanner.ui.billing.BillingActivity;
 import com.example.three_star_store_scanner.ui.productlist.ProductListActivity;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
-
-    private Button addProductButton, viewProductsButton, billingButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        addProductButton = findViewById(R.id.addProductButton);
-        viewProductsButton = findViewById(R.id.viewProductsButton);
-        billingButton = findViewById(R.id.billingButton);
+        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
 
-        addProductButton.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, AddProductActivity.class));
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_billing) {
+                startActivity(new Intent(this, BillingActivity.class));
+                return true;
+            } else if (id == R.id.nav_add) {
+                startActivity(new Intent(this, AddProductActivity.class));
+                return true;
+            } else if (id == R.id.nav_list) {
+                startActivity(new Intent(this, ProductListActivity.class));
+                return true;
+            }
+            return false;
         });
 
-        viewProductsButton.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, ProductListActivity.class));
-        });
 
-        billingButton.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, BillingActivity.class));
-        });
     }
 }
