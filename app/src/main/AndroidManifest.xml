@@ -28,6 +28,6 @@
         <activity android:name=".ui.scanner.BarcodeScannerActivity"/>
         <activity android:name=".ui.billing.BillingActivity"/>
 
-    </application>8
+    </application>
 
 </manifest>

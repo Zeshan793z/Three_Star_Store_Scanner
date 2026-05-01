@@ -1,6 +1,5 @@
 package com.example.three_star_store_scanner.ui.billing;
 
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.ArrayAdapter;
@@ -22,7 +21,7 @@ import java.util.List;
 
 public class BillingActivity extends AppCompatActivity {
 
-    private EditText barcodeInput;
+    private EditText barcodeInput, quantityInput;
     private Button addButton, clearButton, scanButton;
     private ListView billListView;
     private TextView totalText;
@@ -42,6 +41,7 @@ public class BillingActivity extends AppCompatActivity {
         repository = new ProductRepository(this);
 
         barcodeInput = findViewById(R.id.barcodeInput);
+        quantityInput = findViewById(R.id.quantityInput);
         addButton = findViewById(R.id.addButton);
         clearButton = findViewById(R.id.clearButton);
         scanButton = findViewById(R.id.scanButton);
@@ -52,7 +52,18 @@ public class BillingActivity extends AppCompatActivity {
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, billItems);
         billListView.setAdapter(adapter);
 
-        addButton.setOnClickListener(v -> addProductByBarcode(barcodeInput.getText().toString().trim()));
+        addButton.setOnClickListener(v -> {
+            String barcode = barcodeInput.getText().toString().trim();
+            String qtyText = quantityInput.getText().toString().trim();
+
+            if (barcode.isEmpty() || qtyText.isEmpty()) {
+                Toast.makeText(this, "Enter barcode and quantity", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            int quantity = Integer.parseInt(qtyText);
+            addProductByBarcode(barcode, quantity);
+        });
 
         clearButton.setOnClickListener(v -> {
             billItems.clear();
@@ -67,19 +78,16 @@ public class BillingActivity extends AppCompatActivity {
         });
     }
 
-    private void addProductByBarcode(String barcode) {
-        if (barcode.isEmpty()) {
-            Toast.makeText(this, "Enter a barcode", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
+    private void addProductByBarcode(String barcode, int quantity) {
         Product product = repository.getProductByBarcode(barcode);
         if (product != null) {
-            billItems.add(product.name + " | " + product.barcode + " | $" + product.price);
-            totalAmount += product.price;
+            double subtotal = product.price * quantity;
+            billItems.add(product.name + " | " + product.barcode + " | Qty: " + quantity + " | $" + subtotal);
+            totalAmount += subtotal;
             totalText.setText("Total: $" + totalAmount);
             adapter.notifyDataSetChanged();
             barcodeInput.setText("");
+            quantityInput.setText("");
         } else {
             Toast.makeText(this, "Product not found!", Toast.LENGTH_SHORT).show();
         }
@@ -94,8 +102,12 @@ public class BillingActivity extends AppCompatActivity {
             String barcode = data.getStringExtra("productBarcode");
             double price = data.getDoubleExtra("productPrice", 0.0);
 
-            billItems.add(name + " | " + barcode + " | $" + price);
-            totalAmount += price;
+            // Default scanned quantity = 1
+            int quantity = 1;
+            double subtotal = price * quantity;
+
+            billItems.add(name + " | " + barcode + " | Qty: " + quantity + " | $" + subtotal);
+            totalAmount += subtotal;
             totalText.setText("Total: $" + totalAmount);
             adapter.notifyDataSetChanged();
         }
