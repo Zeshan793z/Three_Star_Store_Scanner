@@ -22,17 +22,20 @@ public class BarcodeScannerActivity extends AppCompatActivity {
 
         repository = new ProductRepository(this);
 
-        // Get mode from intent (default = billing)
+        // Default mode = billing
         scanMode = getIntent().getStringExtra("scanMode");
         if (scanMode == null) {
             scanMode = "billing";
         }
 
-        // Start ZXing scanner
         IntentIntegrator integrator = new IntentIntegrator(this);
         integrator.setPrompt("Scan a product barcode");
         integrator.setOrientationLocked(false);
         integrator.setBeepEnabled(true);
+
+        // 👇 Use portrait capture helper
+        integrator.setCaptureActivity(PortraitCaptureActivity.class);
+
         integrator.initiateScan();
     }
 
@@ -44,14 +47,12 @@ public class BarcodeScannerActivity extends AppCompatActivity {
                 String scannedBarcode = result.getContents();
 
                 if (scanMode.equals("billing")) {
-                    // Lookup product in DB
                     Product product = repository.getProductByBarcode(scannedBarcode);
                     if (product != null) {
                         Toast.makeText(this,
                                 "Found: " + product.name + " | $" + product.price,
                                 Toast.LENGTH_LONG).show();
 
-                        // Send product back to BillingActivity
                         Intent intent = new Intent();
                         intent.putExtra("productName", product.name);
                         intent.putExtra("productBarcode", product.barcode);
@@ -62,12 +63,10 @@ public class BarcodeScannerActivity extends AppCompatActivity {
                         setResult(RESULT_CANCELED);
                     }
                 } else if (scanMode.equals("add")) {
-                    // Return raw barcode to AddProductActivity
                     Intent intent = new Intent();
                     intent.putExtra("productBarcode", scannedBarcode);
                     setResult(RESULT_OK, intent);
                 }
-
                 finish();
             } else {
                 Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show();

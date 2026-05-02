@@ -1,115 +1,120 @@
 package com.example.three_star_store_scanner.ui.billing;
 
-import android.content.Intent;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.os.Bundle;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.three_star_store_scanner.R;
 import com.example.three_star_store_scanner.data.entity.Product;
 import com.example.three_star_store_scanner.data.repository.ProductRepository;
-import com.example.three_star_store_scanner.ui.scanner.BarcodeScannerActivity;
+import com.journeyapps.barcodescanner.BarcodeCallback;
+import com.journeyapps.barcodescanner.BarcodeResult;
+import com.journeyapps.barcodescanner.DecoratedBarcodeView;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class BillingActivity extends AppCompatActivity {
 
-    private EditText barcodeInput, quantityInput;
-    private Button addButton, clearButton, scanButton;
-    private ListView billListView;
-    private TextView totalText;
-
+    private DecoratedBarcodeView barcodeScannerView;
+    private RecyclerView billRecyclerView;
+    private BillAdapter billAdapter;
+    private TextView totalPriceText;
+    private Button reviewOrderButton;
+    private List<BillItem> billItems = new ArrayList<>();
+    private double totalPrice = 0.0;
     private ProductRepository repository;
-    private List<String> billItems;
-    private double totalAmount = 0.0;
-    private ArrayAdapter<String> adapter;
 
-    private static final int SCAN_REQUEST_CODE = 1001;
+    private String lastScanned = null;
+    private long lastScanTime = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_billing);
 
+        barcodeScannerView = findViewById(R.id.barcodeScannerView);
+        billRecyclerView = findViewById(R.id.billRecyclerView);
+        totalPriceText = findViewById(R.id.totalPriceText);
+        reviewOrderButton = findViewById(R.id.reviewOrderButton);
+
         repository = new ProductRepository(this);
 
-        barcodeInput = findViewById(R.id.barcodeInput);
-        quantityInput = findViewById(R.id.quantityInput);
-        addButton = findViewById(R.id.addButton);
-        clearButton = findViewById(R.id.clearButton);
-        scanButton = findViewById(R.id.scanButton);
-        billListView = findViewById(R.id.billListView);
-        totalText = findViewById(R.id.totalText);
+        // 🔑 Critical: set LayoutManager so RecyclerView can display items
+        billRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        billItems = new ArrayList<>();
-        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, billItems);
-        billListView.setAdapter(adapter);
+        billAdapter = new BillAdapter(billItems, this::updateTotal);
+        billRecyclerView.setAdapter(billAdapter);
 
-        addButton.setOnClickListener(v -> {
-            String barcode = barcodeInput.getText().toString().trim();
-            String qtyText = quantityInput.getText().toString().trim();
-
-            if (barcode.isEmpty() || qtyText.isEmpty()) {
-                Toast.makeText(this, "Enter barcode and quantity", Toast.LENGTH_SHORT).show();
-                return;
+        // Continuous scanning with debounce
+        barcodeScannerView.decodeContinuous(new BarcodeCallback() {
+            @Override
+            public void barcodeResult(BarcodeResult result) {
+                if (result.getText() != null) {
+                    handleScan(result.getText());
+                }
             }
-
-            int quantity = Integer.parseInt(qtyText);
-            addProductByBarcode(barcode, quantity);
         });
 
-        clearButton.setOnClickListener(v -> {
-            billItems.clear();
-            totalAmount = 0.0;
-            totalText.setText("Total: $0.0");
-            adapter.notifyDataSetChanged();
-        });
-
-        scanButton.setOnClickListener(v -> {
-            Intent intent = new Intent(BillingActivity.this, BarcodeScannerActivity.class);
-            startActivityForResult(intent, SCAN_REQUEST_CODE);
+        reviewOrderButton.setOnClickListener(v -> {
+            Toast.makeText(this, "Review Order clicked", Toast.LENGTH_SHORT).show();
+            // TODO: open ReviewOrderActivity
         });
     }
 
-    private void addProductByBarcode(String barcode, int quantity) {
-        Product product = repository.getProductByBarcode(barcode);
+    private void handleScan(String scannedBarcode) {
+        long now = System.currentTimeMillis();
+
+        // Ignore duplicates within 2 seconds
+        if (scannedBarcode.equals(lastScanned) && (now - lastScanTime < 2000)) {
+            return;
+        }
+
+        lastScanned = scannedBarcode;
+        lastScanTime = now;
+
+        Product product = repository.getProductByBarcode(scannedBarcode);
         if (product != null) {
-            double subtotal = product.price * quantity;
-            billItems.add(product.name + " | " + product.barcode + " | Qty: " + quantity + " | $" + subtotal);
-            totalAmount += subtotal;
-            totalText.setText("Total: $" + totalAmount);
-            adapter.notifyDataSetChanged();
-            barcodeInput.setText("");
-            quantityInput.setText("");
+            BillItem item = new BillItem(product.name, product.barcode, product.price);
+            billItems.add(item);
+            billAdapter.notifyDataSetChanged();
+
+            updateTotal();
+            playBeep();
         } else {
             Toast.makeText(this, "Product not found!", Toast.LENGTH_SHORT).show();
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == SCAN_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
-            String name = data.getStringExtra("productName");
-            String barcode = data.getStringExtra("productBarcode");
-            double price = data.getDoubleExtra("productPrice", 0.0);
-
-            // Default scanned quantity = 1
-            int quantity = 1;
-            double subtotal = price * quantity;
-
-            billItems.add(name + " | " + barcode + " | Qty: " + quantity + " | $" + subtotal);
-            totalAmount += subtotal;
-            totalText.setText("Total: $" + totalAmount);
-            adapter.notifyDataSetChanged();
+    private void updateTotal() {
+        totalPrice = 0.0;
+        for (BillItem item : billItems) {
+            totalPrice += item.getTotalPrice();
         }
+        totalPriceText.setText("Total Price: ₹" + totalPrice);
+    }
+
+    private void playBeep() {
+        ToneGenerator toneGen = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
+        toneGen.startTone(ToneGenerator.TONE_CDMA_PIP, 150);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        barcodeScannerView.resume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        barcodeScannerView.pause();
     }
 }

@@ -25,7 +25,13 @@
 
         <activity android:name=".ui.addproduct.AddProductActivity"/>
         <activity android:name=".ui.productlist.ProductListActivity"/>
-        <activity android:name=".ui.scanner.BarcodeScannerActivity"/>
+        <activity
+                android:name=".ui.scanner.BarcodeScannerActivity"
+                android:screenOrientation="portrait"/>
+        <activity android:name=".ui.scanner.PortraitCaptureActivity"
+                  android:screenOrientation="portrait"
+                  android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+
         <activity android:name=".ui.billing.BillingActivity"/>
 
     </application>
