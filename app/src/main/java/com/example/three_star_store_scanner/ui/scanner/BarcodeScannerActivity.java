@@ -14,12 +14,19 @@ import com.google.zxing.integration.android.IntentResult;
 public class BarcodeScannerActivity extends AppCompatActivity {
 
     private ProductRepository repository;
+    private String scanMode; // "billing" or "add"
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         repository = new ProductRepository(this);
+
+        // Get mode from intent (default = billing)
+        scanMode = getIntent().getStringExtra("scanMode");
+        if (scanMode == null) {
+            scanMode = "billing";
+        }
 
         // Start ZXing scanner
         IntentIntegrator integrator = new IntentIntegrator(this);
@@ -36,23 +43,31 @@ public class BarcodeScannerActivity extends AppCompatActivity {
             if (result.getContents() != null) {
                 String scannedBarcode = result.getContents();
 
-                // Lookup product in DB
-                Product product = repository.getProductByBarcode(scannedBarcode);
-                if (product != null) {
-                    Toast.makeText(this,
-                            "Found: " + product.name + " | $" + product.price,
-                            Toast.LENGTH_LONG).show();
+                if (scanMode.equals("billing")) {
+                    // Lookup product in DB
+                    Product product = repository.getProductByBarcode(scannedBarcode);
+                    if (product != null) {
+                        Toast.makeText(this,
+                                "Found: " + product.name + " | $" + product.price,
+                                Toast.LENGTH_LONG).show();
 
-                    // Send product back to BillingActivity
+                        // Send product back to BillingActivity
+                        Intent intent = new Intent();
+                        intent.putExtra("productName", product.name);
+                        intent.putExtra("productBarcode", product.barcode);
+                        intent.putExtra("productPrice", product.price);
+                        setResult(RESULT_OK, intent);
+                    } else {
+                        Toast.makeText(this, "Product not found!", Toast.LENGTH_LONG).show();
+                        setResult(RESULT_CANCELED);
+                    }
+                } else if (scanMode.equals("add")) {
+                    // Return raw barcode to AddProductActivity
                     Intent intent = new Intent();
-                    intent.putExtra("productName", product.name);
-                    intent.putExtra("productBarcode", product.barcode);
-                    intent.putExtra("productPrice", product.price);
+                    intent.putExtra("productBarcode", scannedBarcode);
                     setResult(RESULT_OK, intent);
-                } else {
-                    Toast.makeText(this, "Product not found!", Toast.LENGTH_LONG).show();
-                    setResult(RESULT_CANCELED);
                 }
+
                 finish();
             } else {
                 Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show();
@@ -63,4 +78,3 @@ public class BarcodeScannerActivity extends AppCompatActivity {
         }
     }
 }
-

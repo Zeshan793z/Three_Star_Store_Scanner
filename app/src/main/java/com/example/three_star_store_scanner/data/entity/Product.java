@@ -22,5 +22,10 @@ public class Product {
         name = "";
     }
 
+    public Product(String name, String barcode, double price) {
+        this.name = name;
+        this.barcode = barcode;
+        this.price = price;
+    }
     // Optional: add stock, category, unit, etc.
 }
